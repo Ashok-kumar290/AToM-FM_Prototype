@@ -1,0 +1,71 @@
+# ============================================
+# AToM-FM - Model Configuration
+# ============================================
+# Qwen2.5 model settings optimized for RTX 4060 Ti
+#
+# Model Tiers (pick based on your VRAM):
+#   - Qwen/Qwen2.5-0.5B   → ~2 GB  (fast prototyping)
+#   - Qwen/Qwen2.5-1.5B   → ~4 GB  (good balance)
+#   - Qwen/Qwen2.5-3B     → ~6 GB  (recommended for 8GB card)
+#   - Qwen/Qwen2.5-7B     → ~6 GB  with 4-bit quantization (max for 8GB)
+#   - Qwen/Qwen2.5-7B     → ~10 GB with 4-bit (needs 16GB card)
+# ============================================
+
+model:
+  # --- Base Model ---
+  name: "Qwen/Qwen2.5-1.5B"          # Default: fits well on 8GB VRAM with QLoRA
+  revision: "main"
+  trust_remote_code: true
+
+  # --- Quantization (QLoRA - 4-bit) ---
+  quantization:
+    enabled: true
+    load_in_4bit: true
+    bnb_4bit_quant_type: "nf4"         # nf4 or fp4
+    bnb_4bit_compute_dtype: "bfloat16" # bfloat16 for Ampere+ GPUs
+    bnb_4bit_use_double_quant: true    # nested quantization for extra savings
+
+  # --- LoRA Configuration ---
+  lora:
+    r: 64                              # LoRA rank (higher = more capacity, more VRAM)
+    lora_alpha: 128                    # scaling factor (usually 2x rank)
+    lora_dropout: 0.05
+    bias: "none"
+    task_type: "CAUSAL_LM"
+    target_modules:                    # Qwen2.5 attention + MLP layers
+      - "q_proj"
+      - "k_proj"
+      - "v_proj"
+      - "o_proj"
+      - "gate_proj"
+      - "up_proj"
+      - "down_proj"
+
+  # --- Tokenizer ---
+  tokenizer:
+    name: null                         # null = same as model name
+    max_length: 2048                   # max sequence length
+    padding_side: "right"
+    truncation: true
+    add_eos_token: true
+
+# --- Model Variants (uncomment to switch) ---
+# Uncomment ONE of these blocks to override the defaults above:
+
+# variant_0_5b:
+#   name: "Qwen/Qwen2.5-0.5B"
+#   lora_r: 32
+#   max_length: 2048
+#   notes: "Ultra-light, great for debugging and fast iteration"
+
+# variant_3b:
+#   name: "Qwen/Qwen2.5-3B"
+#   lora_r: 32
+#   max_length: 1024
+#   notes: "Larger model, reduce max_length to fit in 8GB"
+
+# variant_7b_quantized:
+#   name: "Qwen/Qwen2.5-7B"
+#   lora_r: 16
+#   max_length: 512
+#   notes: "7B with aggressive quantization, tight on 8GB VRAM"

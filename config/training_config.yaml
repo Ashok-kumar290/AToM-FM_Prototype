@@ -1,0 +1,131 @@
+# ============================================
+# AToM-FM - Training Configuration
+# ============================================
+# All parameters tuned for RTX 4060 Ti (8GB VRAM)
+# ============================================
+
+training:
+  # --- Output ---
+  output_dir: "./models/checkpoints"
+  final_model_dir: "./models/final"
+  logging_dir: "./logs"
+
+  # --- Training Hyperparameters ---
+  num_train_epochs: 3
+  max_steps: -1                        # -1 = use num_train_epochs instead
+
+  # --- Batch Size (critical for VRAM) ---
+  per_device_train_batch_size: 2       # keep low for 8GB VRAM
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8       # effective batch size = 2 * 8 = 16
+
+  # --- Learning Rate ---
+  learning_rate: 2.0e-4                # standard for QLoRA fine-tuning
+  weight_decay: 0.01
+  lr_scheduler_type: "cosine"          # cosine, linear, constant
+  warmup_ratio: 0.03                   # 3% of total steps for warmup
+
+  # --- Optimizer ---
+  optim: "paged_adamw_8bit"            # 8-bit Adam, saves ~30% optimizer VRAM
+
+  # --- Precision ---
+  bf16: true                           # use bfloat16 (RTX 4060 Ti supports it)
+  fp16: false
+  tf32: true                           # tensor float32 for matmul speedup
+
+  # --- Gradient Management ---
+  max_grad_norm: 0.3                   # gradient clipping
+  gradient_checkpointing: true         # trade compute for VRAM savings (~40% less)
+
+  # --- Logging ---
+  logging_steps: 10
+  logging_first_step: true
+  report_to: "tensorboard"             # "wandb" or "tensorboard"
+
+  # --- Evaluation ---
+  eval_strategy: "steps"
+  eval_steps: 50
+  eval_accumulation_steps: 4
+
+  # --- Saving ---
+  save_strategy: "steps"
+  save_steps: 100
+  save_total_limit: 3                  # keep only last 3 checkpoints
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+
+  # --- Misc ---
+  seed: 42
+  dataloader_num_workers: 2            # adjust based on CPU cores
+  dataloader_pin_memory: true
+  remove_unused_columns: false
+  group_by_length: true                # groups similar-length samples for efficiency
+  disable_tqdm: false
+
+# --- Dataset Configuration ---
+dataset:
+  # Pick ONE of the datasets below (or provide your own)
+  # These are good starting points for instruction-tuning Qwen:
+
+  # Option 1: General instruction following
+  name: "tatsu-lab/alpaca"
+  split_train: "train[:90%]"
+  split_eval: "train[90%:]"
+
+  # Option 2: High-quality chat/instruction data
+  # name: "Open-Orca/OpenOrca"
+  # subset: null
+  # split_train: "train[:50000]"      # sample subset for prototyping
+  # split_eval: "train[50000:52000]"
+
+  # Option 3: Code-focused
+  # name: "sahil2801/CodeAlpaca-20k"
+  # split_train: "train[:90%]"
+  # split_eval: "train[90%:]"
+
+  # Option 4: Custom local dataset
+  # name: "local"
+  # train_file: "./data/processed/train.jsonl"
+  # eval_file: "./data/processed/eval.jsonl"
+
+  # --- Prompt Template ---
+  prompt_template: |
+    ### Instruction:
+    {instruction}
+
+    ### Input:
+    {input}
+
+    ### Response:
+    {output}
+
+  # Template for samples with no input field
+  prompt_template_no_input: |
+    ### Instruction:
+    {instruction}
+
+    ### Response:
+    {output}
+
+  # --- Preprocessing ---
+  max_length: 2048
+  shuffle: true
+  shuffle_seed: 42
+
+# --- SFT Trainer (trl) Configuration ---
+sft:
+  max_seq_length: 2048
+  packing: false                       # set true for shorter sequences (saves time)
+  dataset_text_field: "text"           # field name after formatting
+  neftune_noise_alpha: 5              # NEFTune: adds noise to embeddings (improves quality)
+
+# --- WandB (optional) ---
+wandb:
+  enabled: false
+  project: "atom-fm-prototype"
+  entity: null
+  run_name: null
+  tags:
+    - "qwen2.5"
+    - "qlora"
+    - "atom-fm"

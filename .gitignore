@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+env/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# Model files (large)
+models/checkpoints/
+models/final/
+models/merged/
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.gguf
+
+# Data
+data/raw/
+data/processed/*.jsonl
+!data/processed/.gitkeep
+
+# Logs
+logs/
+*.log
+wandb/
+runs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# HuggingFace cache
+.cache/

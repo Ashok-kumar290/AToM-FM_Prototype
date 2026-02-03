@@ -23,19 +23,18 @@ def load_atom_dataset(config: dict) -> tuple[Dataset, Dataset]:
     else:
         logger.info(f"Loading dataset: {ds_name}")
         subset = ds_config.get("subset", None)
+        
+        # Get split notation from config
+        split_train = ds_config.get("split_train", "train[:90%]")
+        split_eval = ds_config.get("split_eval", "train[90%:]")
+        
+        # Load with split directly (handles percentage notation)
         if subset:
-            raw = load_dataset(ds_name, subset)
+            train_ds = load_dataset(ds_name, subset, split=split_train)
+            eval_ds = load_dataset(ds_name, subset, split=split_eval)
         else:
-            raw = load_dataset(ds_name)
-
-        train_ds = raw[ds_config.get("split_train", "train[:90%]")]
-        eval_ds = raw[ds_config.get("split_eval", "train[90%:]")]
-
-        # Handle split notation like "train[:90%]"
-        if isinstance(ds_config.get("split_train"), str) and "%" in ds_config["split_train"]:
-            full = load_dataset(ds_name, subset=subset, split=ds_config["split_train"])
-            train_ds = full
-            eval_ds = load_dataset(ds_name, subset=subset, split=ds_config["split_eval"])
+            train_ds = load_dataset(ds_name, split=split_train)
+            eval_ds = load_dataset(ds_name, split=split_eval)
 
     if ds_config.get("shuffle", True):
         train_ds = train_ds.shuffle(seed=ds_config.get("shuffle_seed", 42))

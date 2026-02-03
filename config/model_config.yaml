@@ -13,7 +13,7 @@
 
 model:
   # --- Base Model ---
-  name: "Qwen/Qwen2.5-1.5B"          # Default: fits well on 8GB VRAM with QLoRA
+  name: "Qwen/Qwen2.5-3B"            # Upgraded for better accuracy (fits with packing)
   revision: "main"
   trust_remote_code: true
 
@@ -27,8 +27,8 @@ model:
 
   # --- LoRA Configuration ---
   lora:
-    r: 64                              # LoRA rank (higher = more capacity, more VRAM)
-    lora_alpha: 128                    # scaling factor (usually 2x rank)
+    r: 128                             # Increased for better learning capacity
+    lora_alpha: 256                    # 2x rank for stability
     lora_dropout: 0.05
     bias: "none"
     task_type: "CAUSAL_LM"

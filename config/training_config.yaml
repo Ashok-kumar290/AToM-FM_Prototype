@@ -40,7 +40,7 @@ training:
   # --- Logging ---
   logging_steps: 10
   logging_first_step: true
-  report_to: "tensorboard"             # "wandb" or "tensorboard"
+  report_to: "wandb"                   # "wandb" or "tensorboard"
 
   # --- Evaluation ---
   eval_strategy: "steps"
@@ -108,20 +108,20 @@ dataset:
     {output}
 
   # --- Preprocessing ---
-  max_length: 2048
+  max_length: 1024                     # Optimized for speed/VRAM with 3B model
   shuffle: true
   shuffle_seed: 42
 
 # --- SFT Trainer (trl) Configuration ---
 sft:
-  max_seq_length: 2048
-  packing: false                       # set true for shorter sequences (saves time)
+  max_seq_length: 1024
+  packing: true                        # 2x speedup by combining samples
   dataset_text_field: "text"           # field name after formatting
   neftune_noise_alpha: 5              # NEFTune: adds noise to embeddings (improves quality)
 
 # --- WandB (optional) ---
 wandb:
-  enabled: false
+  enabled: true
   project: "atom-fm-prototype"
   entity: null
   run_name: null

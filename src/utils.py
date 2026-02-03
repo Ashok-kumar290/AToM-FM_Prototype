@@ -72,7 +72,7 @@ def print_gpu_info() -> dict:
     if torch.cuda.is_available():
         info["device_name"] = torch.cuda.get_device_name(0)
         props = torch.cuda.get_device_properties(0)
-        info["vram_total_gb"] = round(props.total_mem / 1e9, 2)
+        info["vram_total_gb"] = round(props.total_memory / 1e9, 2)
         info["vram_allocated_gb"] = round(torch.cuda.memory_allocated(0) / 1e9, 2)
         info["vram_reserved_gb"] = round(torch.cuda.memory_reserved(0) / 1e9, 2)
         info["cuda_version"] = torch.version.cuda
@@ -93,7 +93,7 @@ def get_vram_usage() -> dict:
 
     allocated = torch.cuda.memory_allocated(0) / 1e9
     reserved = torch.cuda.memory_reserved(0) / 1e9
-    total = torch.cuda.get_device_properties(0).total_mem / 1e9
+    total = torch.cuda.get_device_properties(0).total_memory / 1e9
     free = total - allocated
 
     return {

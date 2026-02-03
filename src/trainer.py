@@ -1,22 +1,26 @@
 """
 AToM-FM Trainer Module
 Configures and runs the SFTTrainer for Qwen fine-tuning.
+Updated for TRL 0.27+ API.
 """
 
 import logging
 import os
 
-from transformers import TrainingArguments
-from trl import SFTTrainer
+from trl import SFTConfig, SFTTrainer
 
 logger = logging.getLogger(__name__)
 
 
-def get_training_arguments(config: dict) -> TrainingArguments:
-    """Build TrainingArguments from config."""
+def get_sft_config(config: dict) -> SFTConfig:
+    """Build SFTConfig from config (combines training args and SFT settings for TRL 0.27+)."""
     t = config["training"]
+    sft = config.get("sft", {})
 
-    args = TrainingArguments(
+    # Calculate warmup steps from ratio if not directly specified
+    # warmup_ratio is deprecated, so we'll convert to steps later if needed
+
+    sft_config = SFTConfig(
         output_dir=t.get("output_dir", "./models/checkpoints"),
         num_train_epochs=t.get("num_train_epochs", 3),
         max_steps=t.get("max_steps", -1),
@@ -26,7 +30,7 @@ def get_training_arguments(config: dict) -> TrainingArguments:
         learning_rate=t.get("learning_rate", 2e-4),
         weight_decay=t.get("weight_decay", 0.01),
         lr_scheduler_type=t.get("lr_scheduler_type", "cosine"),
-        warmup_ratio=t.get("warmup_ratio", 0.03),
+        warmup_steps=int(t.get("warmup_ratio", 0.03) * 1000),  # Approximate warmup steps
         optim=t.get("optim", "paged_adamw_8bit"),
         bf16=t.get("bf16", True),
         fp16=t.get("fp16", False),
@@ -34,13 +38,11 @@ def get_training_arguments(config: dict) -> TrainingArguments:
         max_grad_norm=t.get("max_grad_norm", 0.3),
         gradient_checkpointing=t.get("gradient_checkpointing", True),
         gradient_checkpointing_kwargs={"use_reentrant": False},
-        logging_dir=t.get("logging_dir", "./logs"),
         logging_steps=t.get("logging_steps", 10),
         logging_first_step=t.get("logging_first_step", True),
         report_to=t.get("report_to", "tensorboard"),
         eval_strategy=t.get("eval_strategy", "steps"),
         eval_steps=t.get("eval_steps", 50),
-        eval_accumulation_steps=t.get("eval_accumulation_steps", 4),
         save_strategy=t.get("save_strategy", "steps"),
         save_steps=t.get("save_steps", 100),
         save_total_limit=t.get("save_total_limit", 3),
@@ -52,17 +54,22 @@ def get_training_arguments(config: dict) -> TrainingArguments:
         remove_unused_columns=t.get("remove_unused_columns", False),
         group_by_length=t.get("group_by_length", True),
         disable_tqdm=t.get("disable_tqdm", False),
+        # SFT-specific settings (now in SFTConfig)
+        max_length=sft.get("max_seq_length", 2048),
+        packing=sft.get("packing", False),
+        dataset_text_field=sft.get("dataset_text_field", "text"),
+        neftune_noise_alpha=sft.get("neftune_noise_alpha", 5),
     )
 
     logger.info(
-        f"Training args: epochs={args.num_train_epochs}, "
-        f"batch={args.per_device_train_batch_size}, "
-        f"grad_accum={args.gradient_accumulation_steps}, "
-        f"lr={args.learning_rate}, "
-        f"effective_batch={args.per_device_train_batch_size * args.gradient_accumulation_steps}"
+        f"Training args: epochs={sft_config.num_train_epochs}, "
+        f"batch={sft_config.per_device_train_batch_size}, "
+        f"grad_accum={sft_config.gradient_accumulation_steps}, "
+        f"lr={sft_config.learning_rate}, "
+        f"effective_batch={sft_config.per_device_train_batch_size * sft_config.gradient_accumulation_steps}"
     )
 
-    return args
+    return sft_config
 
 
 def create_trainer(
@@ -73,19 +80,14 @@ def create_trainer(
     config: dict,
 ) -> SFTTrainer:
     """Create and return a configured SFTTrainer."""
-    training_args = get_training_arguments(config)
-    sft_config = config.get("sft", {})
+    sft_config = get_sft_config(config)
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
-        args=training_args,
-        max_seq_length=sft_config.get("max_seq_length", 2048),
-        packing=sft_config.get("packing", False),
-        dataset_text_field=sft_config.get("dataset_text_field", "text"),
-        neftune_noise_alpha=sft_config.get("neftune_noise_alpha", 5),
+        args=sft_config,
     )
 
     logger.info("SFTTrainer created successfully")

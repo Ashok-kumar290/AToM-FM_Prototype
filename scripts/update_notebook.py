@@ -21,7 +21,7 @@ setup_cell = {
         "\n",
         "# Login to Weights & Biases\n",
         "import wandb\n",
-        "wandb.login(key=\"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\")"
+        "wandb.login(key=\"YOUR_WANDB_API_KEY\")"
     ]
 }
 
